@@ -1,5 +1,5 @@
 class MsgCreate:
-    def log_reserv_init(fn):
+    def log_reserve_init(fn):
         @Log.logger
         def wrapper(self, *arg, **kwarg):
             result = fn(self, *arg, **kwarg)
@@ -8,7 +8,7 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_reserv_overlap(fn):
+    def log_reserve_overlap(fn):
         @Log.logger
         def wrapper(self, other):
             result = fn(self, other)
@@ -19,7 +19,7 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_reserv_includes(fn):
+    def log_reserve_includes(fn):
         @Log.logger
         def wrapper(self, date):
             result = fn(self, date)
@@ -30,25 +30,23 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_reserv_identify(fn):
+    def log_reserve_identify(fn):
         @Log.logger
         def wrapper(self, date, book, for_):
             result = fn(self, date, book, for_)
             if book != self._book: 
                 Log.message = F'Reservation {self._id} reserves {self._book} not {book}.'
-                return result
-            if for_!=self._for:
+            elif for_!=self._for:
                 Log.message = F'Reservation {self._id} is for {self._for} not {for_}.'
-                return result
-            if not self.includes(date):
+            elif not self.includes(date):
                 Log.message = F'Reservation {self._id} is from {self._from} to {self._to} which '
                 Log.message += F'does not include {date}.'
-                return result
-            Log.message = F'Reservation {self._id} is valid {for_} of {book} on {date}.'
+            else:
+                Log.message = F'Reservation {self._id} is valid {for_} of {book} on {date}.'
             return result
         return wrapper 
 
-    def log_reserv_change_for(fn):
+    def log_reserve_change_for(fn):
         @Log.logger
         def wrapper(self, for_):
             result = fn(self, for_)
@@ -70,8 +68,8 @@ class MsgCreate:
             result = fn(self, name)
             if not result:
                 Log.message = F'User not created, user with name {name} already exists.'
-                return result 
-            Log.message = F'User {name} created.'
+            else:
+                Log.message = F'User {name} created.'
             return result
         return wrapper
 
@@ -83,6 +81,50 @@ class MsgCreate:
             return result
         return wrapper
 
+    def log_library_reserve(fn):
+        @Log.logger
+        def wrapper(self, user, book, date_from, date_to):
+            result = fn(self, user, book, date_from, date_to)
+            if user not in self._users:
+                Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+                Log.message += F'User does not exist.'
+            elif date_from > date_to:
+                Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+                Log.message += F'Incorrect dates.'
+            elif book_count == 0:
+                Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+                Log.message += F'We do not have that book.'
+            elif not result:
+                Log.message = F'We cannot reserve book {book} for {user} from {date_from} '
+                Log.message = F'to {date_to}. We do not have enough books.'
+            else:
+                Log.message = F'Reservation {desired_reservation._id} included.'
+            return result
+        return wrapper
+
+    def log_library_check_reserve(fn):
+        @Log.logger
+        def wrapper(self, user, book, date):
+            result = fn(self, user, book, date)
+            str = 'exists'
+            if not result:
+                str = 'does not exist'
+            Log.message = F'Reservation for {user} of {book} on {date} {str}.'
+            return result
+        return wrapper
+
+    def log_library_change_reserve(fn):
+        @Log.logger
+        def wrapper(self, user, book, date, new_user):
+            result = fn(self, user, book, date, new_user)
+            if new_user not in self._users:
+                Log.message = F'Cannot change the reservation as {new_user} does not exist.'
+            elif not result:
+                Log.message = F'Reservation for {user} of {book} on {date} does not exist.'
+            else:
+                Log.message = F'Reservation for {user} of {book} on {date} changed to {new_user}.'
+            return result
+        return wrapper
 
 
 class Log:
