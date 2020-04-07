@@ -1,8 +1,10 @@
 from itertools import count
+from logger import LOG
 
 class Reservation(object):
     _ids = count(0)
     
+    @LOG.log_reserv_init
     def __init__(self, from_, to, book, for_):
         self._id = next(Reservation._ids)
         self._from = from_
@@ -10,42 +12,28 @@ class Reservation(object):
         self._book = book
         self._for = for_
         self._changes = 0
-        print(F'Created a reservation with id {self._id} of {self._book} '+
-              F'from {self._from} to {self._to} for {self._for}.')
 
+    @LOG.log_reserv_overlap
     def overlapping(self, other):
-        ret = (self._book == other._book and self._to >= other._from 
-               and self._to >= other._from)
-        str = 'do'
-        if not ret:
-            str = 'do not'
-        print(F'Reservations {self._id} and {other._id} {str} overlap')
-        return ret
-            
+        return (self._book == other._book and self._to >= other._from 
+                 and self._from <= other._to)
+
+    @LOG.log_reserv_includes        
     def includes(self, date):
-        ret = (self._from <= date <= self._to)
-        str = 'includes'
-        if not ret:
-            str = 'does not include'
-        print(F'Reservation {self._id} {str} {date}')
-        return ret        
-        
+        return (self._from <= date <= self._to)       
+    
+    @LOG.log_reserv_identify    
     def identify(self, date, book, for_):
         if book != self._book: 
-            print(F'Reservation {self._id} reserves {self._book} not {book}.')
             return False
         if for_!=self._for:
-            print(F'Reservation {self._id} is for {self._for} not {for_}.')
             return False
         if not self.includes(date):
-            print(F'Reservation {self._id} is from {self._from} to {self._to} which '+
-                  F'does not include {date}.')
             return False
-        print(F'Reservation {self._id} is valid {for_} of {book} on {date}.')
         return True        
-        
+    
+    @log_reserv_change_for    
     def change_for(self, for_):
-        print(F'Reservation {self._id} moved from {self._for} to {for_}')
         self._for = for_
         
 
@@ -119,4 +107,9 @@ class Library(object):
         print(F'Reservation for {user} of {book} on {date} changed to {new_user}.')        
         relevant_reservations[0].change_for(new_user)
         return True
+
+
+reserv = Reservation(20, 22, "dad", "ddd")
+reserv2 = Reservation(21, 22, "dad", "ddd")
+reserv.overlapping(reserv2)
         
