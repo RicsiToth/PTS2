@@ -1,10 +1,10 @@
 from itertools import count
-from logger import LOG
+from logger import MsgCreate
 
 class Reservation(object):
     _ids = count(0)
     
-    @LOG.log_reserv_init
+    @MsgCreate.log_reserv_init
     def __init__(self, from_, to, book, for_):
         self._id = next(Reservation._ids)
         self._from = from_
@@ -13,16 +13,16 @@ class Reservation(object):
         self._for = for_
         self._changes = 0
 
-    @LOG.log_reserv_overlap
+    @MsgCreate.log_reserv_overlap
     def overlapping(self, other):
         return (self._book == other._book and self._to >= other._from 
                  and self._from <= other._to)
 
-    @LOG.log_reserv_includes        
+    @MsgCreate.log_reserv_includes        
     def includes(self, date):
         return (self._from <= date <= self._to)       
     
-    @LOG.log_reserv_identify    
+    @MsgCreate.log_reserv_identify    
     def identify(self, date, book, for_):
         if book != self._book: 
             return False
@@ -32,29 +32,29 @@ class Reservation(object):
             return False
         return True        
     
-    @log_reserv_change_for    
+    @MsgCreate.log_reserv_change_for    
     def change_for(self, for_):
         self._for = for_
         
 
 class Library(object):
+    
+    @MsgCreate.log_library_init
     def __init__(self):
         self._users = set()
         self._books = {}   #maps name to count
         self._reservations = [] #Reservations sorted by from
-        print(F'Library created.')
-                
+    
+    @MsgCreate.log_library_add_user            
     def add_user(self, name):
         if name in self._users:
-            print(F'User not created, user with name {name} already exists.')
             return False
         self._users.add(name)
-        print(F'User {name} created.')
         return True
 
+    @MsgCreate.log_library_add_book 
     def add_book(self, name):
         self._books[name] = self._books.get(name, 0) + 1
-        print(F'Book {name} added. We have {self._books[name]} coppies of the book.')
 
     def reserve_book(self, user, book, date_from, date_to):
         book_count = self._books.get(book, 0)
