@@ -34,15 +34,16 @@ class MsgCreate:
         @Log.logger
         def wrapper(self, date, book, for_):
             result = fn(self, date, book, for_)
-            if book != self._book: 
-                Log.message = F'Reservation {self._id} reserves {self._book} not {book}.'
-            elif for_!=self._for:
-                Log.message = F'Reservation {self._id} is for {self._for} not {for_}.'
-            elif not self.includes(date):
-                Log.message = F'Reservation {self._id} is from {self._from} to {self._to} which '
-                Log.message += F'does not include {date}.'
-            else:
+            if result:
                 Log.message = F'Reservation {self._id} is valid {for_} of {book} on {date}.'
+            else:
+                if book != self._book: 
+                    Log.message = F'Reservation {self._id} reserves {self._book} not {book}.'
+                elif for_!=self._for:
+                    Log.message = F'Reservation {self._id} is for {self._for} not {for_}.'
+                elif not self.includes(date):
+                    Log.message = F'Reservation {self._id} is from {self._from} to {self._to} which '
+                    Log.message += F'does not include {date}.'
             return result
         return wrapper 
 
@@ -66,10 +67,10 @@ class MsgCreate:
         @Log.logger
         def wrapper(self, name):
             result = fn(self, name)
-            if not result:
-                Log.message = F'User not created, user with name {name} already exists.'
-            else:
+            if result:
                 Log.message = F'User {name} created.'
+            else:
+                Log.message = F'User not created, user with name {name} already exists.'
             return result
         return wrapper
 
@@ -85,20 +86,21 @@ class MsgCreate:
         @Log.logger
         def wrapper(self, user, book, date_from, date_to):
             result = fn(self, user, book, date_from, date_to)
-            if user not in self._users:
-                Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
-                Log.message += F'User does not exist.'
-            elif date_from > date_to:
-                Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
-                Log.message += F'Incorrect dates.'
-            elif book_count == 0:
-                Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
-                Log.message += F'We do not have that book.'
-            elif not result:
-                Log.message = F'We cannot reserve book {book} for {user} from {date_from} '
-                Log.message = F'to {date_to}. We do not have enough books.'
-            else:
+            if result:
                 Log.message = F'Reservation {desired_reservation._id} included.'
+            else:
+                if user not in self._users:
+                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+                    Log.message += F'User does not exist.'
+                elif date_from > date_to:
+                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+                    Log.message += F'Incorrect dates.'
+                elif book_count == 0:
+                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+                    Log.message += F'We do not have that book.'
+                else:
+                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} '
+                    Log.message = F'to {date_to}. We do not have enough books.'
             return result
         return wrapper
 
@@ -117,12 +119,13 @@ class MsgCreate:
         @Log.logger
         def wrapper(self, user, book, date, new_user):
             result = fn(self, user, book, date, new_user)
-            if new_user not in self._users:
-                Log.message = F'Cannot change the reservation as {new_user} does not exist.'
-            elif not result:
-                Log.message = F'Reservation for {user} of {book} on {date} does not exist.'
-            else:
+            if result:
                 Log.message = F'Reservation for {user} of {book} on {date} changed to {new_user}.'
+            else:
+                if new_user not in self._users:
+                    Log.message = F'Cannot change the reservation as {new_user} does not exist.'
+                else:
+                    Log.message = F'Reservation for {user} of {book} on {date} does not exist.'
             return result
         return wrapper
 
