@@ -1,6 +1,5 @@
 class MsgCreate:
-    def log_reserve_init(fn):
-        @Log.logger
+    def msg_reserve_init(fn):
         def wrapper(self, *arg, **kwarg):
             result = fn(self, *arg, **kwarg)
             Log.message = F'Created a reservation with id {self._id} of {self._book}'
@@ -8,8 +7,7 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_reserve_overlap(fn):
-        @Log.logger
+    def msg_reserve_overlap(fn):
         def wrapper(self, other):
             result = fn(self, other)
             str = 'do'
@@ -19,8 +17,7 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_reserve_includes(fn):
-        @Log.logger
+    def msg_reserve_includes(fn):
         def wrapper(self, date):
             result = fn(self, date)
             str = 'includes'
@@ -30,8 +27,7 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_reserve_identify(fn):
-        @Log.logger
+    def msg_reserve_identify(fn):
         def wrapper(self, date, book, for_):
             result = fn(self, date, book, for_)
             if result:
@@ -47,24 +43,21 @@ class MsgCreate:
             return result
         return wrapper 
 
-    def log_reserve_change_for(fn):
-        @Log.logger
+    def msg_reserve_change_for(fn):
         def wrapper(self, for_):
             result = fn(self, for_)
             Log.message = F'Reservation {self._id} moved from {self._for} to {for_}'
             return result
         return wrapper
 
-    def log_library_init(fn):
-        @Log.logger
+    def msg_library_init(fn):
         def wrapper(self):
             result = fn(self)
             Log.message = F'Library created.'
             return result
         return wrapper 
 
-    def log_library_add_user(fn):
-        @Log.logger
+    def msg_library_add_user(fn):
         def wrapper(self, name):
             result = fn(self, name)
             if result:
@@ -74,38 +67,33 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_library_add_book(fn):
-        @Log.logger
+    def msg_library_add_book(fn):
         def wrapper(self, name):
             result = fn(self, name)
             Log.message = F'Book {name} added. We have {self._books[name]} coppies of the book.'
             return result
         return wrapper
 
-    def log_library_reserve(fn):
-        @Log.logger
+    def msg_library_reserve(fn):
         def wrapper(self, user, book, date_from, date_to):
             result = fn(self, user, book, date_from, date_to)
-            if result:
-                Log.message = F'Reservation {desired_reservation._id} included.'
+            if result >= 0:
+                Log.message = F'Reservation {result} included.'
+                return True
             else:
+                Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
                 if user not in self._users:
-                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
                     Log.message += F'User does not exist.'
                 elif date_from > date_to:
-                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
                     Log.message += F'Incorrect dates.'
-                elif book_count == 0:
-                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+                elif self._books.get(book, 0) == 0:
                     Log.message += F'We do not have that book.'
                 else:
-                    Log.message = F'We cannot reserve book {book} for {user} from {date_from} '
-                    Log.message = F'to {date_to}. We do not have enough books.'
-            return result
+                    Log.message = F'We do not have enough books.'
+                return False
         return wrapper
 
-    def log_library_check_reserve(fn):
-        @Log.logger
+    def msg_library_check_reserve(fn):
         def wrapper(self, user, book, date):
             result = fn(self, user, book, date)
             str = 'exists'
@@ -115,8 +103,7 @@ class MsgCreate:
             return result
         return wrapper
 
-    def log_library_change_reserve(fn):
-        @Log.logger
+    def msg_library_change_reserve(fn):
         def wrapper(self, user, book, date, new_user):
             result = fn(self, user, book, date, new_user)
             if result:
