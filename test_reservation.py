@@ -1,12 +1,15 @@
 import unittest
 from library_mixed import Reservation
+from itertools import count
 
 class TestReservation(unittest.TestCase):
 
     def setUp(self):
+        Reservation._ids = count(0)
         self.res1 = Reservation(20, 25, "First", "Richard")
         
     def test_init(self):
+        self.assertEqual(self.res1._id, 0)
         self.assertEqual(self.res1._from, 20)
         self.assertEqual(self.res1._to, 25)
         self.assertEqual(self.res1._book, "First")

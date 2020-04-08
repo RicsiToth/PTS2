@@ -45,8 +45,9 @@ class MsgCreate:
 
     def msg_reserve_change_for(fn):
         def wrapper(self, for_):
+            tmp = self._for
             result = fn(self, for_)
-            Log.message = F'Reservation {self._id} moved from {self._for} to {for_}'
+            Log.message = F'Reservation {self._id} moved from {tmp} to {for_}'
             return result
         return wrapper
 
@@ -79,7 +80,7 @@ class MsgCreate:
             result = fn(self, user, book, date_from, date_to)
             if result >= 0:
                 Log.message = F'Reservation {result} included.'
-                return True
+                return result
             else:
                 Log.message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
                 if user not in self._users:
@@ -89,8 +90,8 @@ class MsgCreate:
                 elif self._books.get(book, 0) == 0:
                     Log.message += F'We do not have that book.'
                 else:
-                    Log.message = F'We do not have enough books.'
-                return False
+                    Log.message += F'We do not have enough books.'
+                return result
         return wrapper
 
     def msg_library_check_reserve(fn):
@@ -118,9 +119,17 @@ class MsgCreate:
 
 
 class Log:
+    message = "" 
+
     def logger(fn):
         def wrapper(self, *arg, **kwarg):
             result = fn(self, *arg, **kwarg)
             print(Log.message)
             return result
         return wrapper
+
+def enable_logging(cls):
+    for name, value in vars(cls).items():
+        if callable(value):
+            setattr(cls, name, Log.logger(value))
+    return cls

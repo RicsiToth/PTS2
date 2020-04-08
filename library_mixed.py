@@ -1,10 +1,10 @@
 from itertools import count
-from logger import MsgCreate, Log
+from logger import MsgCreate, enable_logging
 
+@enable_logging
 class Reservation(object):
     _ids = count(0)
     
-    @Log.logger
     @MsgCreate.msg_reserve_init
     def __init__(self, from_, to, book, for_):
         self._id = next(Reservation._ids)
@@ -14,18 +14,15 @@ class Reservation(object):
         self._for = for_
         self._changes = 0
 
-    @Log.logger
     @MsgCreate.msg_reserve_overlap
     def overlapping(self, other):
         return (self._book == other._book and self._to >= other._from 
                  and self._from <= other._to)
 
-    @Log.logger
     @MsgCreate.msg_reserve_includes        
     def includes(self, date):
         return (self._from <= date <= self._to)       
    
-    @Log.logger 
     @MsgCreate.msg_reserve_identify    
     def identify(self, date, book, for_):
         if book != self._book: 
@@ -36,22 +33,20 @@ class Reservation(object):
             return False
         return True        
   
-    @Log.logger  
     @MsgCreate.msg_reserve_change_for    
     def change_for(self, for_):
         self._for = for_
         
 
+@enable_logging
 class Library(object):
-  
-    @Log.logger  
+   
     @MsgCreate.msg_library_init
     def __init__(self):
         self._users = set()
         self._books = {}   #maps name to count
         self._reservations = [] #Reservations sorted by from
-
-    @Log.logger    
+  
     @MsgCreate.msg_library_add_user            
     def add_user(self, name):
         if name in self._users:
@@ -59,12 +54,10 @@ class Library(object):
         self._users.add(name)
         return True
 
-    @Log.logger
     @MsgCreate.msg_library_add_book 
     def add_book(self, name):
         self._books[name] = self._books.get(name, 0) + 1
 
-    @Log.logger
     @MsgCreate.msg_library_reserve
     def reserve_book(self, user, book, date_from, date_to):
         book_count = self._books.get(book, 0)
@@ -87,12 +80,10 @@ class Library(object):
         self._reservations.sort(key=lambda x:x._from) #to lazy to make a getter
         return desired_reservation._id
 
-    @Log.logger
     @MsgCreate.msg_library_check_reserve
     def check_reservation(self, user, book, date):
         return any([res.identify(date, book, user) for res in self._reservations])       
 
-    @Log.logger
     @MsgCreate.msg_library_change_reserve
     def change_reservation(self, user, book, date, new_user):
         relevant_reservations = [res for res in self._reservations 
