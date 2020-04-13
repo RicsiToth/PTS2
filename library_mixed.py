@@ -35,6 +35,7 @@ class Reservation(object):
   
     @MsgCreate.msg_reserve_change_for    
     def change_for(self, for_):
+        self._changes += 1
         self._for = for_
         
 
