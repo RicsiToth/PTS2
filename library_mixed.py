@@ -35,15 +35,15 @@ class Reservation(object):
 class Reservation_Messages(Reservation): 
     def __init__(self, from_, to, book, for_):
         super().__init__(from_, to, book, for_)
-        message = F'Created a reservation with id {self._id} of {self._book}'
-        message += F' from {self._from} to {self._to} for {self._for}.'
+        self._message = F'Created a reservation with id {self._id} of {self._book}'
+        self._message += F' from {self._from} to {self._to} for {self._for}.'
 
     def overlapping(self, other):
         result = super().overlapping(other)
         str = 'do'
         if not result:
             str = 'do not'
-        message = F'Reservations {self._id} and {other._id} {str} overlap'
+        self._message = F'Reservations {self._id} and {other._id} {str} overlap'
         return result
      
     def includes(self, date):
@@ -51,109 +51,184 @@ class Reservation_Messages(Reservation):
         str = 'includes'
         if not result:
             str = 'does not include'
-        message = F'Reservation {self._id} {str} {date}'
+        self._message = F'Reservation {self._id} {str} {date}'
         return result       
 
     def identify(self, date, book, for_):
         result = super().identify(date, book, for_)
         if result[0]:
-            message = F'Reservation {self._id} is valid {for_} of {book} on {date}.'
+            self._message = F'Reservation {self._id} is valid {for_} of {book} on {date}.'
         else:
             if result[1] == "book": 
-                message = F'Reservation {self._id} reserves {self._book} not {book}.'
+                self._message = F'Reservation {self._id} reserves {self._book} not {book}.'
             elif result[1] == "for":
-                message = F'Reservation {self._id} is for {self._for} not {for_}.'
+                self._message = F'Reservation {self._id} is for {self._for} not {for_}.'
             elif result[1] == "date":
-                message = F'Reservation {self._id} is from {self._from} to {self._to} which '
-                message += F'does not include {date}.'
+                self._message = F'Reservation {self._id} is from {self._from} to {self._to} which '
+                self._message += F'does not include {date}.'
         return result      
      
     def change_for(self, for_):
         old_for = self._for
         result = super().change_for(for_)
-        message = F'Reservation {self._id} moved from {old_for} to {for_}'
+        self._message = F'Reservation {self._id} moved from {old_for} to {for_}'
         return result
 
 
 class Reservation_Logging_Messages(ReservationMessages):
     def __init__(self, from_, to, book, for_):
         super().__init__(from_, to, book, for_)
-        print(super().message)
+        print(super()._message)
 
     def overlapping(self, other):
         result = super().overlapping(other)
-        print(super().message)
+        print(super()._message)
         return result
      
     def includes(self, date):
         result = super().includes(date)
-        print(super().message)
+        print(super()._message)
         return result       
 
     def identify(self, date, book, for_):
         result = super().identify(date, book, for_)
-        print(super().message)
+        print(super()._message)
         return result      
      
     def change_for(self, for_):
         result = super().change_for(for_)
-        print(super().message)
+        print(super()._message)
         return result
 
 
-@enable_logging
 class Library(object):
-   
-    @MsgCreate.msg_library_init
-    def __init__(self):
+    def __init__(self, reservations_factory = Reservation):
         self._users = set()
-        self._books = {}   #maps name to count
-        self._reservations = [] #Reservations sorted by from
-  
-    @MsgCreate.msg_library_add_user            
+        self._books = {}
+        self._reservations = []
+        self._reservations_factory = reservations_factory
+            
     def add_user(self, name):
         if name in self._users:
             return False
         self._users.add(name)
         return True
 
-    @MsgCreate.msg_library_add_book 
     def add_book(self, name):
         self._books[name] = self._books.get(name, 0) + 1
 
-    @MsgCreate.msg_library_reserve
     def reserve_book(self, user, book, date_from, date_to):
         book_count = self._books.get(book, 0)
         if user not in self._users:
-            return -1
+            return (False, "user")
         if date_from > date_to:
-            return -1
+            return (False, "date")
         if book_count == 0:
-            return -1
-        desired_reservation = Reservation(date_from, date_to, book, user)
+            return (False, "book_count")
+        desired_reservation = self._reservations_factory(date_from, date_to, book, user)
         relevant_reservations = [res for res in self._reservations
                                  if desired_reservation.overlapping(res)] + [desired_reservation]
-        #we check that if we add this reservation then for every reservation record that starts 
-        #between date_from and date_to no more than book_count books are reserved.
         for from_ in [res._from for res in relevant_reservations]:
             if desired_reservation.includes(from_):
                 if sum([rec.includes(from_) for rec in relevant_reservations]) > book_count:
-                    return -1
+                    return (False, "reserved")
         self._reservations+=[desired_reservation]
-        self._reservations.sort(key=lambda x:x._from) #to lazy to make a getter
-        return desired_reservation._id
+        self._reservations.sort(key=lambda x:x._from)
+        return (True, desired_reservation._id)
 
-    @MsgCreate.msg_library_check_reserve
     def check_reservation(self, user, book, date):
         return any([res.identify(date, book, user) for res in self._reservations])       
 
-    @MsgCreate.msg_library_change_reserve
     def change_reservation(self, user, book, date, new_user):
         relevant_reservations = [res for res in self._reservations 
                                      if res.identify(date, book, user)]
         if not relevant_reservations:        
-            return False
+            return (False, "not_relevant")
         if new_user not in self._users:
-            return False      
+            return (False, "user")      
         relevant_reservations[0].change_for(new_user)
-        return True  
+        return (True, "")  
+
+
+class Library_Messages(Library):
+    def __init__(self, reservations_factory = Reservation):
+        super().__init__(reservations_factory)
+        self._message = F'Library created.'
+            
+    def add_user(self, name):
+        result = super().add_user(name)
+        if result:
+            self._message = F'User {name} created.'
+        else:
+            self._message = F'User not created, user with name {name} already exists.'
+        return result
+
+    def add_book(self, name):
+        result = super().add_book(name)
+        self._message = F'Book {name} added. We have {self._books[name]} coppies of the book.'
+        return result
+
+    def reserve_book(self, user, book, date_from, date_to):
+         result = super().reserve_book(user, book, date_from, date_to)
+         if result[0]:
+            self._message = F'Reservation {result[1]} included.'
+         else:
+            self._message = F'We cannot reserve book {book} for {user} from {date_from} to {date_to}. '
+            if result[1] == "user":
+                self._message += F'User does not exist.'
+            elif result[1] == "date":
+                self._message += F'Incorrect dates.'
+            elif result[1] == "book_count":
+                self._message += F'We do not have that book.'
+            elif result[1] == "reserved":
+                self._message += F'We do not have enough books.'
+         return result
+
+    def check_reservation(self, user, book, date):
+        result = super().check_reservation(user, book, date)
+        str = 'exists'
+        if not result:
+            str = 'does not exist'
+        self._message = F'Reservation for {user} of {book} on {date} {str}.'
+        return result       
+
+    def change_reservation(self, user, book, date, new_user):
+        result = super().change_reservation(user, book, date, new_user)
+        if result[0]:
+            self._message = F'Reservation for {user} of {book} on {date} changed to {new_user}.'
+        else:
+            if result[1] == "user":
+                self._message = F'Cannot change the reservation as {new_user} does not exist.'
+            elif result[1] == "not_relevant":
+                self._message = F'Reservation for {user} of {book} on {date} does not exist.'
+        return result 
+
+class Library_Logging_Messages(Library_Messages):
+    def __init__(self, reservations_factory = Reservation):
+        super().__init__(reservations_factory)
+        print(super()._message)
+            
+    def add_user(self, name):
+        result = super().add_user(name)
+        print(super()._message)
+        return result
+
+    def add_book(self, name):
+        result = super().add_book(name)
+        print(super()._message)
+        return result
+
+    def reserve_book(self, user, book, date_from, date_to):
+         result = super().reserve_book(user, book, date_from, date_to)
+         print(super()._message)
+         return result
+
+    def check_reservation(self, user, book, date):
+        result = super().check_reservation(user, book, date)
+        print(super()._message)
+        return result       
+
+    def change_reservation(self, user, book, date, new_user):
+        result = super().change_reservation(user, book, date, new_user)
+        print(super()._message)
+        return result 
