@@ -1,11 +1,8 @@
 from itertools import count
-from logger import MsgCreate, enable_logging
 
-@enable_logging
 class Reservation(object):
     _ids = count(0)
     
-    @MsgCreate.msg_reserve_init
     def __init__(self, from_, to, book, for_):
         self._id = next(Reservation._ids)
         self._from = from_
@@ -14,30 +11,95 @@ class Reservation(object):
         self._for = for_
         self._changes = 0
 
-    @MsgCreate.msg_reserve_overlap
     def overlapping(self, other):
         return (self._book == other._book and self._to >= other._from 
                  and self._from <= other._to)
-
-    @MsgCreate.msg_reserve_includes        
+  
     def includes(self, date):
         return (self._from <= date <= self._to)       
-   
-    @MsgCreate.msg_reserve_identify    
+    
     def identify(self, date, book, for_):
         if book != self._book: 
-            return False
+            return (False, "book")
         if for_!=self._for:
-            return False
+            return (False, "for")
         if not self.includes(date):
-            return False
-        return True        
+            return (False, "date")
+        return (True, "")        
   
-    @MsgCreate.msg_reserve_change_for    
     def change_for(self, for_):
         self._changes += 1
         self._for = for_
-        
+
+
+class Reservation_Messages(Reservation): 
+    def __init__(self, from_, to, book, for_):
+        super().__init__(from_, to, book, for_)
+        message = F'Created a reservation with id {self._id} of {self._book}'
+        message += F' from {self._from} to {self._to} for {self._for}.'
+
+    def overlapping(self, other):
+        result = super().overlapping(other)
+        str = 'do'
+        if not result:
+            str = 'do not'
+        message = F'Reservations {self._id} and {other._id} {str} overlap'
+        return result
+     
+    def includes(self, date):
+        result = super().includes(date)
+        str = 'includes'
+        if not result:
+            str = 'does not include'
+        message = F'Reservation {self._id} {str} {date}'
+        return result       
+
+    def identify(self, date, book, for_):
+        result = super().identify(date, book, for_)
+        if result[0]:
+            message = F'Reservation {self._id} is valid {for_} of {book} on {date}.'
+        else:
+            if result[1] == "book": 
+                message = F'Reservation {self._id} reserves {self._book} not {book}.'
+            elif result[1] == "for":
+                message = F'Reservation {self._id} is for {self._for} not {for_}.'
+            elif result[1] == "date":
+                message = F'Reservation {self._id} is from {self._from} to {self._to} which '
+                message += F'does not include {date}.'
+        return result      
+     
+    def change_for(self, for_):
+        old_for = self._for
+        result = super().change_for(for_)
+        message = F'Reservation {self._id} moved from {old_for} to {for_}'
+        return result
+
+
+class Reservation_Logging_Messages(ReservationMessages):
+    def __init__(self, from_, to, book, for_):
+        super().__init__(from_, to, book, for_)
+        print(super().message)
+
+    def overlapping(self, other):
+        result = super().overlapping(other)
+        print(super().message)
+        return result
+     
+    def includes(self, date):
+        result = super().includes(date)
+        print(super().message)
+        return result       
+
+    def identify(self, date, book, for_):
+        result = super().identify(date, book, for_)
+        print(super().message)
+        return result      
+     
+    def change_for(self, for_):
+        result = super().change_for(for_)
+        print(super().message)
+        return result
+
 
 @enable_logging
 class Library(object):
