@@ -30,10 +30,10 @@ class TestReservation(unittest.TestCase):
         self.assertFalse(self.res1.includes(26))
     
     def test_identify(self):
-        self.assertTrue(self.res1.identify(20, "First", "Richard"))
-        self.assertFalse(self.res1.identify(20, "Second", "Richard"))
-        self.assertFalse(self.res1.identify(20, "First", "Fero"))
-        self.assertFalse(self.res1.identify(19, "First", "Richard"))
+        self.assertEqual(self.res1.identify(20, "First", "Richard"), (True, ""))
+        self.assertEqual(self.res1.identify(20, "Second", "Richard"), (False, "book"))
+        self.assertEqual(self.res1.identify(20, "First", "Fero"), (False, "for"))
+        self.assertEqual(self.res1.identify(19, "First", "Richard"), (False, "date"))
 
     def test_change_for(self):
         self.res1.change_for("Peto")

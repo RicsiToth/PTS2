@@ -32,7 +32,7 @@ class Reservation(object):
         self._for = for_
 
 
-class Reservation_Messages(Reservation): 
+class Reservation_Messages(Reservation):
     def __init__(self, from_, to, book, for_):
         super().__init__(from_, to, book, for_)
         self._message = F'Created a reservation with id {self._id} of {self._book}'
@@ -75,7 +75,7 @@ class Reservation_Messages(Reservation):
         return result
 
 
-class Reservation_Logging_Messages(ReservationMessages):
+class Reservation_Logging_Messages(Reservation_Messages):
     def __init__(self, from_, to, book, for_):
         super().__init__(from_, to, book, for_)
         print(super()._message)
@@ -137,11 +137,11 @@ class Library(object):
         return (True, desired_reservation._id)
 
     def check_reservation(self, user, book, date):
-        return any([res.identify(date, book, user) for res in self._reservations])       
+        return any([res.identify(date, book, user)[0] for res in self._reservations])       
 
     def change_reservation(self, user, book, date, new_user):
         relevant_reservations = [res for res in self._reservations 
-                                     if res.identify(date, book, user)]
+                                     if res.identify(date, book, user)[0]]
         if not relevant_reservations:        
             return (False, "not_relevant")
         if new_user not in self._users:
